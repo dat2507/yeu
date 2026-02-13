@@ -1,0 +1,464 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+ <HEAD>
+  <TITLE> Gửi người thương ❤️ </TITLE>
+  <META NAME="Generator" CONTENT="EditPlus">
+  <META NAME="Author" CONTENT="">
+  <META NAME="Keywords" CONTENT="">
+  <META NAME="Description" CONTENT="">
+  <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Nunito:wght@400&display=swap" rel="stylesheet">
+  
+  <style>
+  html, body {
+    height: 100%;
+    padding: 0;
+    margin: 0;
+    background: #000;
+    overflow: hidden;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  /* Cấu hình chung cho Canvas */
+  canvas {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    transition: opacity 1.5s ease-in-out; /* Hiệu ứng mờ dần khi chuyển cảnh */
+  }
+
+  /* ID riêng cho từng Stage */
+  #pinkboard { z-index: 1; } /* Trái tim */
+  #galaxyCanvas { z-index: 2; opacity: 0; pointer-events: none; } /* Galaxy (ẩn lúc đầu) */
+
+  /* Dòng chữ hướng dẫn click */
+  .instruction {
+    position: absolute;
+    bottom: 30px;
+    width: 100%;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    z-index: 100;
+    font-size: 14px;
+    animation: blink 2s infinite;
+    pointer-events: none;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
+  }
+
+  /* --- STAGE 3: BỨC THƯ --- */
+  #letterStage {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 3;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0,0,0,0.7); /* Nền tối đè lên galaxy */
+  }
+
+  .card {
+    background: rgba(255, 250, 240, 0.95);
+    padding: 40px;
+    width: 80%;
+    max-width: 600px;
+    border-radius: 10px;
+    box-shadow: 0 0 30px rgba(255, 192, 203, 0.4);
+    text-align: center;
+    transform: scale(0.8);
+    opacity: 0;
+    transition: all 1s ease;
+  }
+  
+  .card.visible {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  .card h1 {
+    font-family: 'Dancing Script', cursive;
+    color: #d63384;
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+  }
+
+  .card p {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    color: #4a4a4a;
+    min-height: 100px;
+    white-space: pre-line;
+  }
+
+  </style>
+ </HEAD>
+
+ <BODY>
+
+  <div class="instruction" id="instruction">Chạm vào màn hình để tiếp tục...</div>
+
+  <canvas id="pinkboard"></canvas>
+
+  <canvas id="galaxyCanvas"></canvas>
+
+  <div id="letterStage">
+      <div class="card" id="letterCard">
+          <h1>Gửi Cậu! ❤️</h1>
+          <p id="typewriterText"></p>
+      </div>
+  </div>
+
+  <audio id="bgMusic" loop>
+    <source src="https://data.chiasenhac.com/down2/2275/4/2274296-85750d4d/128/I%20Do%20-%20911.mp3" type="audio/mpeg">
+  </audio>
+
+  <script>
+  /* --- QUẢN LÝ CHUYỂN CẢNH (LOGIC CHÍNH) --- */
+  let stage = 1;
+  const instruction = document.getElementById('instruction');
+  const bgMusic = document.getElementById('bgMusic');
+  
+  // Biến kiểm soát dừng animation trái tim
+  let stopHeartAnimation = false;
+
+  document.addEventListener('click', function() {
+      // Bật nhạc
+      if (bgMusic.paused) { bgMusic.play().catch(e => console.log("Audio play failed")); }
+
+      if (stage === 1) {
+          // CHUYỂN TỪ TIM -> GALAXY
+          stage = 2;
+          
+          // Ẩn tim
+          document.getElementById('pinkboard').style.opacity = 0;
+          setTimeout(() => { 
+            stopHeartAnimation = true; // Dừng render tim để nhẹ máy
+          }, 1500);
+
+          // Hiện Galaxy
+          const galaxyCanvas = document.getElementById('galaxyCanvas');
+          galaxyCanvas.style.opacity = 1;
+          initGalaxy(); // Bắt đầu chạy galaxy
+
+      } else if (stage === 2) {
+          // CHUYỂN TỪ GALAXY -> THƯ
+          stage = 3;
+          instruction.style.display = 'none'; // Ẩn hướng dẫn
+          
+          // Galaxy vẫn chạy làm nền nhưng mờ đi chút nếu muốn, hoặc để nguyên
+          
+          // Hiện khung thư
+          const letterStage = document.getElementById('letterStage');
+          letterStage.style.display = 'flex';
+          
+          setTimeout(() => {
+              const card = document.getElementById('letterCard');
+              card.classList.add('visible');
+              typeWriter(); // Gõ chữ
+          }, 100);
+      }
+  });
+
+
+  /* =========================================
+   * STAGE 1: TRÁI TIM (CODE GỐC CỦA BẠN)
+   * ========================================= */
+  var settings = {
+   particles: {
+    length:   500, 
+    duration:   2, 
+    velocity: 100, 
+    effect: -0.75, 
+    size:      30, 
+   },
+  };
+
+  (function(){var b=0;var c=["ms","moz","webkit","o"];for(var a=0;a<c.length&&!window.requestAnimationFrame;++a){window.requestAnimationFrame=window[c[a]+"RequestAnimationFrame"];window.cancelAnimationFrame=window[c[a]+"CancelAnimationFrame"]||window[c[a]+"CancelRequestAnimationFrame"]}if(!window.requestAnimationFrame){window.requestAnimationFrame=function(h,e){var d=new Date().getTime();var f=Math.max(0,16-(d-b));var g=window.setTimeout(function(){h(d+f)},f);b=d+f;return g}}if(!window.cancelAnimationFrame){window.cancelAnimationFrame=function(d){clearTimeout(d)}}}());
+
+  var Point = (function() {
+   function Point(x, y) {
+    this.x = (typeof x !== 'undefined') ? x : 0;
+    this.y = (typeof y !== 'undefined') ? y : 0;
+   }
+   Point.prototype.clone = function() {
+    return new Point(this.x, this.y);
+   };
+   Point.prototype.length = function(length) {
+    if (typeof length == 'undefined')
+      return Math.sqrt(this.x * this.x + this.y * this.y);
+    this.normalize();
+    this.x *= length;
+    this.y *= length;
+    return this;
+   };
+   Point.prototype.normalize = function() {
+    var length = this.length();
+    this.x /= length;
+    this.y /= length;
+    return this;
+   };
+   return Point;
+  })();
+
+  var Particle = (function() {
+   function Particle() {
+    this.position = new Point();
+    this.velocity = new Point();
+    this.acceleration = new Point();
+    this.age = 0;
+   }
+   Particle.prototype.initialize = function(x, y, dx, dy) {
+    this.position.x = x;
+    this.position.y = y;
+    this.velocity.x = dx;
+    this.velocity.y = dy;
+    this.acceleration.x = dx * settings.particles.effect;
+    this.acceleration.y = dy * settings.particles.effect;
+    this.age = 0;
+   };
+   Particle.prototype.update = function(deltaTime) {
+    this.position.x += this.velocity.x * deltaTime;
+    this.position.y += this.velocity.y * deltaTime;
+    this.velocity.x += this.acceleration.x * deltaTime;
+    this.velocity.y += this.acceleration.y * deltaTime;
+    this.age += deltaTime;
+   };
+   Particle.prototype.draw = function(context, image) {
+    function ease(t) {
+      return (--t) * t * t + 1;
+    }
+    var size = image.width * ease(this.age / settings.particles.duration);
+    context.globalAlpha = 1 - this.age / settings.particles.duration;
+    context.drawImage(image, this.position.x - size / 2, this.position.y - size / 2, size, size);
+   };
+   return Particle;
+  })();
+
+  var ParticlePool = (function() {
+   var particles,
+       firstActive = 0,
+       firstFree   = 0,
+       duration    = settings.particles.duration;
+  
+   function ParticlePool(length) {
+    particles = new Array(length);
+    for (var i = 0; i < particles.length; i++)
+      particles[i] = new Particle();
+   }
+   ParticlePool.prototype.add = function(x, y, dx, dy) {
+    particles[firstFree].initialize(x, y, dx, dy);
+    firstFree++;
+    if (firstFree   == particles.length) firstFree   = 0;
+    if (firstActive == firstFree        ) firstActive++;
+    if (firstActive == particles.length) firstActive = 0;
+   };
+   ParticlePool.prototype.update = function(deltaTime) {
+    var i;
+    if (firstActive < firstFree) {
+      for (i = firstActive; i < firstFree; i++)
+        particles[i].update(deltaTime);
+    }
+    if (firstFree < firstActive) {
+      for (i = firstActive; i < particles.length; i++)
+        particles[i].update(deltaTime);
+      for (i = 0; i < firstFree; i++)
+        particles[i].update(deltaTime);
+    }
+    while (particles[firstActive].age >= duration && firstActive != firstFree) {
+      firstActive++;
+      if (firstActive == particles.length) firstActive = 0;
+    }
+   };
+   ParticlePool.prototype.draw = function(context, image) {
+    if (firstActive < firstFree) {
+      for (i = firstActive; i < firstFree; i++)
+        particles[i].draw(context, image);
+    }
+    if (firstFree < firstActive) {
+      for (i = firstActive; i < particles.length; i++)
+        particles[i].draw(context, image);
+      for (i = 0; i < firstFree; i++)
+        particles[i].draw(context, image);
+    }
+   };
+   return ParticlePool;
+  })();
+
+  (function(canvas) {
+   var context = canvas.getContext('2d'),
+       particles = new ParticlePool(settings.particles.length),
+       particleRate = settings.particles.length / settings.particles.duration, 
+       time;
+  
+   function pointOnHeart(t) {
+    return new Point(
+      160 * Math.pow(Math.sin(t), 3),
+      130 * Math.cos(t) - 50 * Math.cos(2 * t) - 20 * Math.cos(3 * t) - 10 * Math.cos(4 * t) + 25
+    );
+   }
+  
+   var image = (function() {
+    var canvas  = document.createElement('canvas'),
+        context = canvas.getContext('2d');
+    canvas.width  = settings.particles.size;
+    canvas.height = settings.particles.size;
+    function to(t) {
+      var point = pointOnHeart(t);
+      point.x = settings.particles.size / 2 + point.x * settings.particles.size / 350;
+      point.y = settings.particles.size / 2 - point.y * settings.particles.size / 350;
+      return point;
+    }
+    context.beginPath();
+    var t = -Math.PI;
+    var point = to(t);
+    context.moveTo(point.x, point.y);
+    while (t < Math.PI) {
+      t += 0.01; 
+      point = to(t);
+      context.lineTo(point.x, point.y);
+    }
+    context.closePath();
+    context.fillStyle = '#ea80b0';
+    context.fill();
+    var image = new Image();
+    image.src = canvas.toDataURL();
+    return image;
+   })();
+  
+   function render() {
+    if (stopHeartAnimation) return; // DỪNG render nếu đã qua màn khác
+
+    requestAnimationFrame(render);
+    var newTime   = new Date().getTime() / 1000,
+        deltaTime = newTime - (time || newTime);
+    time = newTime;
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    var amount = particleRate * deltaTime;
+    for (var i = 0; i < amount; i++) {
+      var pos = pointOnHeart(Math.PI - 2 * Math.PI * Math.random());
+      var dir = pos.clone().length(settings.particles.velocity);
+      particles.add(canvas.width / 2 + pos.x, canvas.height / 2 - pos.y, dir.x, -dir.y);
+    }
+    particles.update(deltaTime);
+    particles.draw(context, image);
+   }
+  
+   function onResize() {
+    canvas.width  = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+   }
+   window.onresize = onResize;
+  
+   setTimeout(function() {
+    onResize();
+    render();
+   }, 10);
+  })(document.getElementById('pinkboard'));
+
+
+  /* =========================================
+   * STAGE 2: GALAXY (XOAY TRÒN & PHÁT SÁNG)
+   * ========================================= */
+  function initGalaxy() {
+      const canvas = document.getElementById('galaxyCanvas');
+      const ctx = canvas.getContext('2d');
+      let width, height;
+      
+      // Resize
+      function resize() {
+          width = canvas.width = window.innerWidth;
+          height = canvas.height = window.innerHeight;
+      }
+      window.addEventListener('resize', resize);
+      resize();
+
+      // Cấu hình sao
+      const stars = [];
+      const numStars = 500;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      // Tạo sao ngẫu nhiên
+      for (let i = 0; i < numStars; i++) {
+          stars.push({
+              x: Math.random() * width,
+              y: Math.random() * height,
+              radius: Math.random() * 1.5 + 0.5, // Kích thước sao
+              angle: Math.random() * Math.PI * 2, // Góc ban đầu
+              velocity: (Math.random() * 0.002) + 0.0005, // Tốc độ xoay chậm
+              distance: Math.random() * (Math.max(width, height) / 1.5), // Khoảng cách từ tâm
+              color: `rgba(255, 255, 255, ${Math.random() * 0.8 + 0.2})`,
+              glow: Math.random() > 0.8 // 20% sao sẽ phát sáng mạnh
+          });
+      }
+
+      function animate() {
+          // Xóa màn hình với hiệu ứng đuôi mờ (trail effect)
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'; 
+          ctx.fillRect(0, 0, width, height);
+
+          stars.forEach(star => {
+              // Cập nhật góc xoay (Quay tròn)
+              star.angle += star.velocity;
+
+              // Tính vị trí mới dựa trên góc và khoảng cách
+              const x = width/2 + Math.cos(star.angle) * star.distance;
+              const y = height/2 + Math.sin(star.angle) * star.distance;
+
+              // Vẽ sao
+              ctx.beginPath();
+              ctx.arc(x, y, star.radius, 0, Math.PI * 2);
+              ctx.fillStyle = star.color;
+              
+              // Hiệu ứng phát sáng
+              if (star.glow) {
+                  ctx.shadowBlur = 10;
+                  ctx.shadowColor = 'white';
+              } else {
+                  ctx.shadowBlur = 0;
+              }
+              
+              ctx.fill();
+          });
+
+          requestAnimationFrame(animate);
+      }
+      
+      animate();
+  }
+
+  /* =========================================
+   * STAGE 3: TYPEWRITER (BỨC THƯ)
+   * ========================================= */
+  // NỘI DUNG THƯ (BẠN SỬA Ở ĐÂY)
+  const letterContent = 
+`Gửi người anh thương,
+Người ta nói vũ trụ bao la rộng lớn, nhưng anh chỉ thấy thế giới của anh thu bé lại vừa bằng nụ cười của em.
+Cảm ơn vì đã xuất hiện và làm cuộc sống của anh rực rỡ hơn cả dải ngân hà kia. 
+Happy Valentine's Day! ❤️`;
+
+  function typeWriter() {
+      const textElement = document.getElementById('typewriterText');
+      let i = 0;
+      const speed = 60; // Tốc độ gõ chữ
+
+      function type() {
+          if (i < letterContent.length) {
+              textElement.innerHTML += letterContent.charAt(i) === '\n' ? '<br>' : letterContent.charAt(i);
+              i++;
+              setTimeout(type, speed);
+          }
+      }
+      type();
+  }
+
+  </script>
+ </BODY>
+</HTML>
